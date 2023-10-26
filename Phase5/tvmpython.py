@@ -52,6 +52,7 @@ shape_dict = {input_name: img_data.shape}
 mod, params = relay.frontend.from_onnx(onnx_model, shape_dict)
 
 # 用标准优化，将模型构建到 TVM 库中
+target = "llvm"
 with tvm.transform.PassContext(opt_level=3):
     lib = relay.build(mod, target=target, params=params)
 
