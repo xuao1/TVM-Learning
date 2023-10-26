@@ -329,7 +329,7 @@ np.savez("predictions.npz", output_0=result.outputs['output_0'])
 
 ![image-20231026143508895](.\img\image-20231026143508895.png)
 
-> 目前遇到了报错：
+> 目前遇到了报错，但是使用其他 records.json 是没问题的：
 >
 > Traceback (most recent call last):
 >   File "/home/xxa/Desktop/myscripts/tvmcpythonintro.py", line 14, in <module>
@@ -495,6 +495,131 @@ ranks = np.argsort(scores)[::-1]
 for rank in ranks[0:5]:
     print("class='%s' with probability=%f" % (labels[rank], scores[rank]))
 ```
+
+运行结果（不包含 5.5 部分）：
+
+![image-20231026191416315](.\img\image-20231026191416315.png)
+
+### 5.7 调优模型
+
+在 TVM 的 `autotvm` 模块中，调优是一个重要的步骤，其目标是为给定的任务找到最优的配置以提高性能。调优过程大致分为两个主要阶段：**搜索** 和 **评估**
+
+最简单的调优形式中，需要：target，调优记录文件的存储路径
+
+```python
+import tvm.auto_scheduler as auto_scheduler
+from tvm.autotvm.tuner import XGBTuner
+from tvm import autotvm
+```
+
+设置部分基本参数：
+
++ `number`：将要测试的不同配置的数量
+
++ `repeat`：将对每个配置进行多少次测试 
+
++ `min_repeat_ms`：运行测试需要多长时间，如果重复次数低于此时间，则增加其值
+
+  在 GPU 上进行精确调优时此选项是必需的，在 CPU 调优则不是必需的，将此值设置为 0表示禁
+
++ `timeout`：每个测试配置运行训练代码的时间上限
+
+```python
+number = 10
+repeat = 1
+min_repeat_ms = 0  # 调优 CPU 时设置为 0
+timeout = 10  # 秒
+
+# 创建 autotvm 运行器
+runner = autotvm.LocalRunner(
+    number=number,
+    repeat=repeat,
+    timeout=timeout,
+    min_repeat_ms=min_repeat_ms,
+    enable_cpu_cache_flush=True,
+)
+```
+
+Runner 负责在硬件上**评估给定配置的性能**，LocalRunner 是运行在本地机器上的一个特定类型的 Runner
+
+```python
+tuning_option = {
+    "tuner": "xgb",
+    "trials": 20,
+    "early_stopping": 100,
+    "measure_option": autotvm.measure_option(
+        builder=autotvm.LocalBuilder(build_func="default"), runner=runner
+    ),
+    "tuning_records": "resnet-50-v2-autotuning.json",
+}
+```
+
++ 使用 XGBoost 算法来指导搜索
+
++ 试验次数设置为 20，此处这个值比较小。对于 CPU 推荐 1500，对于 GPU 推荐 3000-4000。
+
++ `early_stopping`：使得搜索提前停止的试验最小值，如果在一系列连续的尝试中没有看到性能改进，参数允许调优过程提前终止
+
++ measure option 决定了构建试用代码并运行的位置
+
+  定义了两个主要组件：
+
+  + builder 负责从给定配置构建可执行代码
+  + runner 负责运行并测量该代码的性能
+
++ `Tuning_records`：指定将调优数据写入的哪个文件中
+
+```python
+# 首先从 onnx 模型中提取任务，mod 是将 onnx 导入到 Relay 时返回的参数
+tasks = autotvm.task.extract_from_program(mod["main"], target=target, params=params)
+
+# 按顺序调优提取的任务
+for i, task in enumerate(tasks):
+    prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
+    tuner_obj = XGBTuner(task, loss_type="rank")
+    tuner_obj.tune(
+        n_trial=min(tuning_option["trials"], len(task.config_space)),
+        early_stopping=tuning_option["early_stopping"],
+        measure_option=tuning_option["measure_option"],
+        callbacks=[
+            autotvm.callback.progress_bar(tuning_option["trials"], prefix=prefix),
+            autotvm.callback.log_to_file(tuning_option["tuning_records"]),
+        ],
+    )
+```
+
+`callbacks` 是函数列表，这些函数在调优过程中的不同时间点被调用。
+
+- `autotvm.callback.progress_bar(tuning_option["trials"], prefix=prefix)`
+
+  这个回调函数显示一个进度条，给用户一个直观的了解调优过程的进度。
+
+- `autotvm.callback.log_to_file(tuning_option["tuning_records"])`
+
+  这个回调函数将调优日志写入指定的文件中。
+
+### 5.8 使用调优数据编译优化模型
+
+获取存储在 `resnet-50-v2-autotuning.json`（上述调优过程的输出文件）中的调优记录。编译器会用这个结果，为指定 target 上的模型生成高性能代码。
+
+```python
+with autotvm.apply_history_best(tuning_option["tuning_records"]):
+    with tvm.transform.PassContext(opt_level=3, config={}):
+        lib = relay.build(mod, target=target, params=params)
+
+dev = tvm.device(str(target), 0)
+module = graph_executor.GraphModule(lib["default"](dev))
+```
+
+剩余过程一摸一样。
+
+
+
+
+
+
+
+
 
 
 
