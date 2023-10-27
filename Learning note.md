@@ -329,22 +329,7 @@ np.savez("predictions.npz", output_0=result.outputs['output_0'])
 
 ![image-20231026143508895](.\img\image-20231026143508895.png)
 
-> 目前遇到了报错，但是使用其他 records.json 是没问题的：
->
-> Traceback (most recent call last):
->   File "/home/xxa/Desktop/myscripts/tvmcpythonintro.py", line 14, in <module>
->     package = tvmc.compile(model, target="llvm", tuning_records=log_file) # 使用调优
->   File "/home/xxa/Desktop/tvm/python/tvm/driver/tvmc/compiler.py", line 412, in compile_model
->     with autotvm.apply_history_best(tuning_records):
->   File "/home/xxa/Desktop/tvm/python/tvm/autotvm/task/dispatcher.py", line 263, in __init__
->     self.load(records)
->   File "/home/xxa/Desktop/tvm/python/tvm/autotvm/task/dispatcher.py", line 306, in load
->     for inp, res in flattened_records:
->   File "/home/xxa/Desktop/tvm/python/tvm/autotvm/record.py", line 236, in load_from_file
->     ret = decode(row)
->   File "/home/xxa/Desktop/tvm/python/tvm/autotvm/record.py", line 154, in decode
->     tgt, task_name, task_args, task_kwargs = row["input"]
-> KeyError: 'input'
+
 
 ## 5 使用 Python 接口（AutoTVM）编译和优化模型
 

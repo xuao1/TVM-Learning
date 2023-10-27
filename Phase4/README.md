@@ -17,5 +17,9 @@ from tvm.driver import tvmc
 + `tvmcpythonintro.py`：调用并执行 TVM 功能的 Python 脚本文件
 + `records.json`：自动调优（autoschedule）生成的 调优记录文件
 
-但是目前对于调优记录文件的加载仍有问题，待解决
+~~但是目前对于调优记录文件的加载仍有问题，待解决~~
+
+已解决，可以正确运行
+
+
 
