@@ -10,6 +10,7 @@ A = te.placeholder((n,), name="A")
 B = te.placeholder((n,), name="B")
 C = te.compute(A.shape, lambda i: A[i] + B[i], name="C")
 
+s = te.create_schedule(C.op)
 s[C].parallel(C.op.axis[0])
 
 fadd_parallel = tvm.build(s, [A, B, C], tgt, name="myadd_parallel")
