@@ -13,7 +13,7 @@ C = te.compute(A.shape, lambda i: A[i] + B[i], name="C")
 s = te.create_schedule(C.op)
 s[C].parallel(C.op.axis[0])
 
-fadd_parallel = tvm.build(s, [A, B, C], tgt, name="myadd_parallel")
+fadd_parallel = tvm.build(s, [A, B, C], target, name="myadd_parallel")
 
 dev = tvm.device(target.kind.name, 0)
 
