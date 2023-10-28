@@ -65,9 +65,9 @@ import tvm.auto_scheduler as auto_scheduler
 from tvm.autotvm.tuner import XGBTuner
 from tvm import autotvm
 
-number = 10
-repeat = 1
-min_repeat_ms = 0  # 调优 CPU 时设置为 0
+number = 20
+repeat = 3
+min_repeat_ms = 150  # 调优 CPU 时设置为 0
 timeout = 10  # 秒
 
 # 创建 autotvm 运行器
@@ -76,15 +76,15 @@ runner = autotvm.LocalRunner(
     repeat=repeat,
     timeout=timeout,
     min_repeat_ms=min_repeat_ms,
-    enable_cpu_cache_flush=True,
 )
 
 tuning_option = {
     "tuner": "xgb",
-    "trials": 1000,
-    "early_stopping": 1000,
+    "trials": 2000,
+    "early_stopping": 600,
     "measure_option": autotvm.measure_option(
-        builder=autotvm.LocalBuilder(build_func="default"), runner=runner
+        builder=autotvm.LocalBuilder(timeout=10),
+        runner=runner
     ),
     "tuning_records": "resnet-50-v2-autotuning.json",
 }
