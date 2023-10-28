@@ -21,6 +21,8 @@ onnx_model = onnx.load(model_path)
 # 为 numpy 的 RNG 设置 seed，得到一致的结果
 np.random.seed(0)
 
+print("The model is downloaded from %s!" % (model_url))
+
 
 ###################################################################
 # 下载、预处理和加载测试图像
@@ -42,6 +44,8 @@ norm_img_data = (img_data / 255 - imagenet_mean) / imagenet_stddev
 # 添加 batch 维度，期望 4 维输入：NCHW。
 img_data = np.expand_dims(norm_img_data, axis=0)
 
+print("The image is downloaded from %s!" % (img_url))
+
 
 ###################################################################
 # 将模型导入到 Relay
@@ -51,6 +55,8 @@ shape_dict = {input_name: img_data.shape}
 mod, params = relay.frontend.from_onnx(onnx_model, shape_dict)
 
 target = "llvm"
+
+print("Relay IR is built.")
 
 
 ###################################################################
@@ -86,6 +92,8 @@ tuning_option = {
 # 首先从 onnx 模型中提取任务，mod 是将 onnx 导入到 Relay 时返回的参数
 tasks = autotvm.task.extract_from_program(mod["main"], target=target, params=params)
 
+print("Begin tuning tasks...")
+
 # 按顺序调优提取的任务
 for i, task in enumerate(tasks):
     prefix = "[Task %2d/%2d] " % (i + 1, len(tasks))
@@ -100,6 +108,8 @@ for i, task in enumerate(tasks):
         ],
     )
 
+print("Tuning done!")
+
 
 ###################################################################
 # 使用调优数据编译优化模型
@@ -110,6 +120,8 @@ with autotvm.apply_history_best(tuning_option["tuning_records"]):
 dev = tvm.device(str(target), 0)
 module = graph_executor.GraphModule(lib["default"](dev))
 
+print("Compile done!")
+
 
 ###################################################################
 # 在 TVM Runtime 执行
@@ -118,6 +130,8 @@ module.set_input(input_name, img_data)
 module.run()
 output_shape = (1, 1000)
 tvm_output = module.get_output(0, tvm.nd.empty(output_shape)).numpy()
+
+print("Execute done!")
 
 
 ###################################################################

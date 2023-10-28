@@ -21,6 +21,8 @@ onnx_model = onnx.load(model_path)
 # 为 numpy 的 RNG 设置 seed，得到一致的结果
 np.random.seed(0)
 
+print("The model is downloaded from %s!" % (model_url))
+
 
 ###################################################################
 # 下载、预处理和加载测试图像
@@ -42,6 +44,8 @@ norm_img_data = (img_data / 255 - imagenet_mean) / imagenet_stddev
 # 添加 batch 维度，期望 4 维输入：NCHW。
 img_data = np.expand_dims(norm_img_data, axis=0)
 
+print("The image is downloaded from %s!" % (img_url))
+
 
 ###################################################################
 # 使用 Relay 编译模型
@@ -60,6 +64,8 @@ with tvm.transform.PassContext(opt_level=3):
 dev = tvm.device(str(target), 0)
 module = graph_executor.GraphModule(lib["default"](dev))
 
+print("Relay frontend is done.")
+
 
 ###################################################################
 # 在 TVM Runtime 执行
@@ -68,6 +74,8 @@ module.set_input(input_name, img_data)
 module.run()
 output_shape = (1, 1000)
 tvm_output = module.get_output(0, tvm.nd.empty(output_shape)).numpy()
+
+print("TVM runtime is done.")
 
 
 ###################################################################
