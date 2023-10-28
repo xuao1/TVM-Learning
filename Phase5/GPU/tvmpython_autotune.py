@@ -81,8 +81,8 @@ runner = autotvm.LocalRunner(
 
 tuning_option = {
     "tuner": "xgb",
-    "trials": 20,
-    "early_stopping": 100,
+    "trials": 1000,
+    "early_stopping": 1000,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(build_func="default"), runner=runner
     ),
