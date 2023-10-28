@@ -16,3 +16,12 @@ for (int i = 0; i < n; ++i) {
 s = te.create_schedule(C.op)
 
 fadd = tvm.build(s, [A, B, C], target, name="myadd")
+
+dev = tvm.device(tgt.kind.name, 0)
+
+n = 1024
+a = tvm.nd.array(np.random.uniform(size=n).astype(A.dtype), dev)
+b = tvm.nd.array(np.random.uniform(size=n).astype(B.dtype), dev)
+c = tvm.nd.array(np.zeros(n, dtype=C.dtype), dev)
+fadd(a, b, c)
+tvm.testing.assert_allclose(c.numpy(), a.numpy() + b.numpy())       # 验证结果
