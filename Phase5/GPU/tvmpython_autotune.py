@@ -54,7 +54,7 @@ shape_dict = {input_name: img_data.shape}
 
 mod, params = relay.frontend.from_onnx(onnx_model, shape_dict)
 
-target = tvm.target.cuda()
+target = tvm.target.Target("cuda -model=a100 -arch=sm_80")
 
 print("Relay IR is built.")
 
@@ -80,10 +80,10 @@ runner = autotvm.LocalRunner(
 
 tuning_option = {
     "tuner": "xgb",
-    "trials": 2000,
+    "trials": 400,
     "early_stopping": 600,
     "measure_option": autotvm.measure_option(
-        builder=autotvm.LocalBuilder(build_func="default"),
+        builder=autotvm.LocalBuilder(build_func="default"Z),
         runner=runner
     ),
     "tuning_records": "resnet-50-v2-autotuning.json",
