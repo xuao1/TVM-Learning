@@ -83,7 +83,7 @@ tuning_option = {
     "trials": 400,
     "early_stopping": 600,
     "measure_option": autotvm.measure_option(
-        builder=autotvm.LocalBuilder(build_func="default"Z),
+        builder=autotvm.LocalBuilder(build_func="default"),
         runner=runner
     ),
     "tuning_records": "resnet-50-v2-autotuning.json",
