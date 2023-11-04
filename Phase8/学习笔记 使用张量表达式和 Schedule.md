@@ -20,7 +20,7 @@ Scheduel 可由算子列表创建，它默认以行优先的方式串行计算�
 
 ### 1.1 split
 
-`split` 可根据 factor 将指定 axis 拆分为两个 axis
+`split` 可根据 **factor** 将指定 axis 拆分为两个 axis
 
 ```python
 A = te.placeholder((m,), name="A")
@@ -33,5 +33,31 @@ print(tvm.lower(s, [A, B], simple_mode=True))
 
 算子 B 进行了 split，实际在计算的时候，会将原本该 axis 上的运算拆分为两层 for 循环，内层 for 循环是从 0 到 31（即 factor 个元素）。
 
-注意到，拆分需要指定算子的 `.op.axis[0]`，同时指定每次内层循环的计算数目 factor.
+注意到，**拆分需要指定算子的 `.op.axis[0]`，同时指定每次内层循环的计算数目 factor.**
+
+也可以用 **nparts** 来拆分 axis，它拆分 axis 的方式与 factor 相反。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
