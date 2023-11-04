@@ -54,15 +54,23 @@ xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
 
 `fuse` 可将一个计算的两个连续 axis 融合。
 
-对于上面的 tile，可以将 `i.inner` 和 `j.inner` （即 xi 和 yi）融合：
+对于上面的 `tile`，可以将 `i.inner` 和 `j.inner` （即 xi 和 yi）融合：
 
 ```python
-fused = s[B].fuse(xi, yi)	 
+s[B].fuse(xi, yi)	 
 ```
 
 在这个例子中，原本 xi 是从 0 到 9，yi 是从 0 到 5，那么融合以后就是 0 到 50.
 
+### 1.4 reorder
 
+`reorder` 可按指定的顺序对 axis 重新排序
+
+对于上面的 `tile`，对 axis 重新排序：
+
+```python
+s[B].reorder(xi, yo, xo, yi)
+```
 
 
 

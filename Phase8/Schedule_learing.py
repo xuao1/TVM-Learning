@@ -52,6 +52,6 @@ xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
 
 ##########################################################################
 # fuse
-fused = s[B].fuse(xi, yi)
+s[B].fuse(xi, yi)
 
 print(tvm.lower(s, [A, B], simple_mode=True))
