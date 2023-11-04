@@ -72,7 +72,7 @@ s[B].fuse(xi, yi)
 s[B].reorder(xi, yo, xo, yi)
 ```
 
-
+### 1.5 
 
 
 
