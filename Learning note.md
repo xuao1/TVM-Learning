@@ -4,7 +4,7 @@
 
 TVM 是一个开源的深度学习编译器，适用于 CPU、GPU、ARM 等多种硬件架构
 
-<img src="D:\Desktop\GPU Sharing\TVM\TVM-Learning\img\image-20231025102540036.png" alt="image-20231025102540036" style="zoom:67%;" />
+<img src=".\img\image-20231025102540036.png" alt="image-20231025102540036" style="zoom:67%;" />
 
 1. **从 TensorFlow、PyTorch 或 ONNX 等框架导入模型**
 
@@ -52,16 +52,6 @@ TVM 是一个开源的深度学习编译器，适用于 CPU、GPU、ARM 等多�
 ## 2 从源码安装 TVM
 
 ![image-20231025113336473](.\img\image-20231025113336473.png)
-
-构建 cpptest:
-
-![image-20231025114841960](.\img\image-20231025114841960.png)
-
-运行 cpptest：
-
-![image-20231025115049827](.\img\image-20231025115049827.png)
-
-![image-20231025115106055](.\img\image-20231025115106055.png)
 
 
 
@@ -597,6 +587,246 @@ module = graph_executor.GraphModule(lib["default"](dev))
 ```
 
 剩余过程一摸一样。
+
+## 6 使用 Docker 部署 TVM
+
+### 6.1 获取并启动
+
+获取 TVM CPU 版的 Docker 镜像：
+
+```shell
+docker pull tlcpack/ci-cpu:20230604-060130-0af9ff90e
+```
+
+启动：
+
+```shell
+docker run -v $(pwd):/workspace -it tlcpack/ci-cpu:20230604-060130-0af9ff90e /bin/bash
+```
+
++ `-v $(pwd):/workspace` 是将当前目录映射到容器的 `/workspace` 目录，`-it` 是为容器分配一个伪 TTY 和保持 stdin 打开，最后的 `/bin/bash` 是容器启动后要运行的命令，用于开启一个 bash shell
++ 使用 exit 命令退出 Docker
+
+常用 Docker 命令：
+
+```shell
+docker ps -a
+docker start [CONTAINER_ID]
+docker attach [CONTAINER_ID]
+docker stop [CONTAINER_ID]
+docker exec -it [CONTAINER_ID] /bin/bash
+docker rm -f <containerid>
+```
+
+### 6.2 在容器内安装 TVM
+
+下载 tvm 源码：
+
+```shell
+git clone --recursive https://github.com/apache/tvm tvm
+```
+
+安装依赖（似乎 Docker 里已经按转好了）：
+
+```shell
+apt-get update
+apt-get install -y python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev build-essential cmake libedit-dev libxml2-dev
+```
+
+安装 llvm：
+
+```shell
+apt install llvm
+```
+
+make：（在 tvm 文件夹下）
+
+```shell
+mkdir build
+cp cmake/config.cmake build
+```
+
+修改 config.cmake，设置 `set(USE_LLVM ON)`，利用 CMake 搜索一个可用的 LLVM 版本。
+
+```shell
+cd build
+cmake ..
+make -j8
+```
+
+安装 Python package：在 ~/.bashrc 末尾添加：
+
+```shell
+export TVM_HOME=/path/to/tvm
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+alias tvmc='python3 -m tvm.driver.tvmc'
+```
+
+然后运行命令：`source ~/.bashrc`
+
+### 6.3 在容器内使用命令行运行 tvmc
+
+与 3 使用 TVMC 编译和优化模型 基本一样
+
+### 6.4 使用 Python API 运行 TVM
+
+直接运行第五部分的代码即可
+
+
+
+## 7 在 GPU 平台上使用 Docker 运行 TVM
+
+### 7.1 获取并启动
+
+前提是安装了 docker 和 nvidia-docker
+
+pull 的是 GPU 版本的 Docker Image
+
+```shell
+docker pull tlcpack/ci-gpu:20230504-142417-4d37a0a0
+```
+
+启动（设置了退出时自动删除）：
+
+```shell
+docker run --gpus all --privileged -v $(pwd):/workspace -it --rm tlcpack/ci-gpu:20230504-142417-4d37a0a0 /bin/bash
+```
+
+![image-20231028192008857](.\img\image-20231028192008857.png)
+
+
+
+### 7.2 在容器内安装 TVM
+
+下载 tvm 源码：
+
+```shell
+git clone --recursive https://github.com/apache/tvm tvm
+```
+
+安装依赖（似乎 Docker 里已经按转好了）：
+
+```shell
+apt-get update
+apt-get install -y python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev build-essential cmake libedit-dev libxml2-dev
+```
+
+安装 llvm：
+
+```shell
+apt-get install llvm
+```
+
+![image-20231028192731221](.\img\image-20231028192731221.png)
+
+make：（在 tvm 文件夹下）
+
+```shell
+mkdir build
+cp cmake/config.cmake build
+```
+
+修改 config.cmake，设置 `set(USE_LLVM ON)`，利用 CMake 搜索一个可用的 LLVM 版本。
+
+设置 `set(USE_CUDA ON)`
+
+```shell
+cd build
+cmake ..
+make -j8
+```
+
+安装 Python package：在 ~/.bashrc 末尾添加：
+
+```shell
+export TVM_HOME=/path/to/tvm
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+alias tvmc='python3 -m tvm.driver.tvmc'
+```
+
+然后运行命令：`source ~/.bashrc`
+
+### 7.3 使用 Python API 运行 TVM
+
+CPU 版（未引入调优）：
+
+![image-20231028200224021](.\img\image-20231028200224021.png)
+
+GPU 版：修改代码中的 target 为 cuda
+
+未调优：
+
+![image-20231028211532823](.\img\image-20231028211532823.png)
+
+调优：
+
+```python
+target = tvm.target.Target("cuda -model=a100 -arch=sm_80")
+
+number = 20
+repeat = 3
+min_repeat_ms = 150  # 调优 CPU 时设置为 0
+timeout = 10  # 秒
+
+# 创建 autotvm 运行器
+runner = autotvm.LocalRunner(
+    number=number,
+    repeat=repeat,
+    timeout=timeout,
+    min_repeat_ms=min_repeat_ms,
+)
+
+tuning_option = {
+    "tuner": "xgb",
+    "trials": 400,
+    "early_stopping": 600,
+    "measure_option": autotvm.measure_option(
+        builder=autotvm.LocalBuilder(build_func="default"Z),
+        runner=runner
+    ),
+    "tuning_records": "resnet-50-v2-autotuning.json",
+}
+```
+
+![image-20231028214613450](.\img\image-20231028214613450.png)
+
+> 疑惑：（已解决）
+>
+> 在 docker 内运行调优程序时，无论在容器内还是宿主机上运行 nvidia-smi，都看不到正在运行的进程，而且 GPU 利用率、显存使用量、温度和功率都保持在非常低的水平：
+>
+> ```shell
+> Sun Oct 29 02:48:18 2023       
+> +-----------------------------------------------------------------------------+
+> | NVIDIA-SMI 515.48.07    Driver Version: 515.48.07    CUDA Version: 11.8     |
+> |-------------------------------+----------------------+----------------------+
+> | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+> | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+> |                               |                      |               MIG M. |
+> |===============================+======================+======================|
+> |   0  NVIDIA A100-PCI...  On   | 00000000:18:00.0 Off |                    0 |
+> | N/A   44C    P0    37W / 250W |      2MiB / 40960MiB |      0%      Default |
+> |                               |                      |             Disabled |
+> +-------------------------------+----------------------+----------------------+
+> 
+> +-----------------------------------------------------------------------------+
+> ```
+>
+> 通过命令：
+>
+> ```shell
+> nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
+> ```
+>
+> 显示：
+>
+> ```shell
+> pid, process_name, used_gpu_memory [MiB]
+> 1417460, /venv/apache-tvm-py3.8/bin/python3, 418 MiB
+> ```
+>
+> 说明是存在一个进程，在调用 docker 内部的 /venv 文件夹下的文件在运行，至于 GPU 占用率不高，在使用 `watch -n 1 nvidia-smi` 命令时，可以注意到在某些短暂的时间段里 GPU 占用率等会突然上升，所以应该是 TVM 的调用程序不会一直高强度使用 GPU
+
+![image-20231030092715348](.\img\image-20231030092715348.png)
 
 
 
