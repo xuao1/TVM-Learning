@@ -15,4 +15,15 @@ C = te.compute((m, n), lambda i, j: A[i, j] * B[i, j], name="C")
 
 s = te.create_schedule(C.op)
 
-print(tvm.lower(s, [A, B, C], simple_mode=True))
+# print(tvm.lower(s, [A, B, C], simple_mode=True))
+
+##########################################################################
+# split
+A = te.placeholder((m,), name="A")
+B = te.compute((m,), lambda i: A[i] * 2, name="B")
+
+s = te.create_schedule(B.op)
+
+xo, xi = s[B].split(B.op.axis[0], factor=32)
+
+print(tvm.lower(s, [A, B], simple_mode=True))
