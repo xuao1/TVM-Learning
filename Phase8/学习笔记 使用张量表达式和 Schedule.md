@@ -28,16 +28,25 @@ B = te.compute((m,), lambda i: A[i] * 2, name="B")
 
 s = te.create_schedule(B.op)
 xo, xi = s[B].split(B.op.axis[0], factor=32)
-print(tvm.lower(s, [A, B], simple_mode=True))		
 ```
 
-算子 B 进行了 split，实际在计算的时候，会将原本该 axis 上的运算拆分为两层 for 循环，内层 for 循环是从 0 到 31（即 factor 个元素）。
+算子 B 进行了 split，实际在计算的时候，会将原本该 axis 上的运算拆分为两层 for 循环，内层 for 循环是从 0 到 31（即 factor 个元素）。以上述代码为例，可以**理解为拆分成若干个小组，每组 32 个元素**。
 
 注意到，**拆分需要指定算子的 `.op.axis[0]`，同时指定每次内层循环的计算数目 factor.**
 
-也可以用 **nparts** 来拆分 axis，它拆分 axis 的方式与 factor 相反。
+也可以用 **nparts** 来拆分 axis，它拆分 axis 的方式与 factor 相反。即外层循环的执行次数 nparts 个，可以**理解为拆分成 32 个小组，每个小组若干个元素**（平均分）。
 
+### 1.2 tile
 
+`tile` 可在两个 axis 上逐块执行计算。
+
+```python
+A = te.placeholder((m, n), name="A")
+B = te.compute((m, n), lambda i, j: A[i, j]*2, name="B")
+
+s = te.create_schedule(B.op)
+xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
+```
 
 
 

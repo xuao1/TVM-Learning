@@ -37,4 +37,15 @@ s = te.create_schedule(B.op)
 
 xo, xi = s[B].split(B.op.axis[0], nparts=32)
 
+# print(tvm.lower(s, [A, B], simple_mode=True))
+
+##########################################################################
+# tile
+A = te.placeholder((m, n), name="A")
+B = te.compute((m, n), lambda i, j: A[i, j] * 2, name="B")
+
+s = te.create_schedule(B.op)
+
+xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
+
 print(tvm.lower(s, [A, B], simple_mode=True))
