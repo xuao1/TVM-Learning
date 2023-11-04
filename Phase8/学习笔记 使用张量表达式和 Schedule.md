@@ -72,7 +72,22 @@ s[B].fuse(xi, yi)
 s[B].reorder(xi, yo, xo, yi)
 ```
 
-### 1.5 
+### 1.5 bind
+
+`bind` 可将指定的 axis 与线程 axis 绑定，常用于 GPU 编程。
+
+```python
+A = te.placeholder((n,), name="A")
+B = te.compute((n,), lambda i: A[i] * 2, name="B")
+s = te.create_schedule(B.op)
+bx, tx = s[B].split(B.op.axis[0], factor=64)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
+```
+
+首先进行 `split`，将计算分成若干个组，每组计算 64 个元素。
+
+将组绑定到 block 上，将组内的元素绑定到 thread 上。
 
 
 

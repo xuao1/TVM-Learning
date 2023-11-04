@@ -49,4 +49,14 @@ xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
 ##########################################################################
 # reorder
 s[B].reorder(xi, yo, xo, yi)
+# print(tvm.lower(s, [A, B], simple_mode=True))
+
+##########################################################################
+# bind
+A = te.placeholder((n,), name="A")
+B = te.compute((n,), lambda i: A[i] * 2, name="B")
+s = te.create_schedule(B.op)
+bx, tx = s[B].split(B.op.axis[0], factor=64)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
 print(tvm.lower(s, [A, B], simple_mode=True))
