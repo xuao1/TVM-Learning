@@ -48,11 +48,19 @@ s = te.create_schedule(B.op)
 xo, yo, xi, yi = s[B].tile(B.op.axis[0], B.op.axis[1], x_factor=10, y_factor=5)
 ```
 
+即两个维度均进行 split，而且是 factor 的 split
 
+### 1.3 fuse
 
+`fuse` 可将一个计算的两个连续 axis 融合。
 
+对于上面的 tile，可以将 `i.inner` 和 `j.inner` （即 xi 和 yi）融合：
 
+```python
+fused = s[B].fuse(xi, yi)	 
+```
 
+在这个例子中，原本 xi 是从 0 到 9，yi 是从 0 到 5，那么融合以后就是 0 到 50.
 
 
 
