@@ -126,11 +126,25 @@ s[B].compute_at(s[C], C.op.axis[0])
 
 `compute_inline` 可将 stage 标记为 inline，然后扩展计算体，并将其插入到需要张量的地址。
 
+```python
+A = te.placeholder((m,), name="A")
+B = te.compute((m,), lambda i: A[i] + 1, name="B")
+C = te.compute((m,), lambda i: B[i] * 2, name="C")
+s = te.create_schedule(C.op)
+s[B].compute_inline()
 ```
 
-```
+该操作会将算子 B 的计算放在 C 中：
 
+![image-20231105105839271](..\img\image-20231105105839271.png)
 
+没有显式的 B 了
+
+### 1.8 compute_root
+
+`compute_root` 可将一个 stage 的计算移动到 root，更具体地说，`compute_root` 会使得计算在一个单独的循环中执行，而不是嵌入到其他计算中。
+
+> 目前看来，是和 `compute_root` 以及 `compute_inline` 是类似逆操作
 
 
 
