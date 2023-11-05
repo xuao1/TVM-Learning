@@ -18,3 +18,10 @@ s = te.create_schedule(B.op)
 ko, ki = s[B].split(B.op.reduce_axis[0], factor=16)
 BF = s.rfactor(B, ki)
 print(tvm.lower(s, [A, B], simple_mode=True))
+
+for k_inner, i in T.grid(16, n):
+    B_rf_1[k_inner * n + i] = T.float32(0)
+    for k_outer in range((m + 15) // 16):
+        if T.likely(k_outer * 16 + k_inner < m):
+            A_2 = T.Buffer((A_1.strides[0] * n,), data=A_1.data, buffer_type="auto")
+            B_rf_1[k_inner * n + i] = B_rf_1[k_inner * n + i] + A_2[i * A_1.strides[0] + (k_outer * 16 + k_inner) * A_1.strides[1]]
