@@ -194,9 +194,9 @@ reduction 轴类似于普通轴，可以拆分。
 ko, ki = s[B].split(B.op.reduce_axis[0], factor=16)
 ```
 
+![image-20231105134052514](..\img\image-20231105134052514.png)
 
-
-
+即将原本的内层循环求行和（归约操作）拆分为两层循环。
 
 
 
