@@ -126,7 +126,9 @@ s[B].compute_at(s[C], C.op.axis[0])
 
 `compute_inline` 可将 stage 标记为 inline，然后扩展计算体，并将其插入到需要张量的地址。
 
+```
 
+```
 
 
 
