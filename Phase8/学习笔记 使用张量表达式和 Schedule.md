@@ -144,7 +144,59 @@ s[B].compute_inline()
 
 `compute_root` 可将一个 stage 的计算移动到 root，更具体地说，`compute_root` 会使得计算在一个单独的循环中执行，而不是嵌入到其他计算中。
 
-> 目前看来，是和 `compute_root` 以及 `compute_inline` 是类似逆操作
+> 目前看来，是和 `compute_root` 以及 `compute_inline` 是逆操作
+
+```python
+A = te.placeholder((m,), name="A")
+B = te.compute((m,), lambda i: A[i] + 1, name="B")
+C = te.compute((m,), lambda i: B[i] * 2, name="C")
+s = te.create_schedule(C.op)
+s[B].compute_at(s[C], C.op.axis[0])
+s[B].compute_root()
+```
+
+即，原本执行完 `compute_at` 或者 `compute_inline` 后，算子 B 会和 C 一起运算，再执行 `cpmpute_root` 后，又会单独在一个 for 循环中计算。
+
+### 1.9 总结
+
+上述是若干 Scheduel 原语，可以看到这几个特点：
+
++ create_scheduel 需要的参数是算子的 `.op`
++ 执行 Scheduel 原语的是 `s[B]`，即 Schedule 的算子
+
+
+
+## 2 归约 reduce
+
+关联归约算子（如 sum/max/min）是线性代数运算的典型构造块。
+
+求矩阵的行和：
+
+首先用 `re.reduce_axis` 声明一个归约轴，然后 `te.sum` 接收要归约的表达式和规约轴。
+
+```python
+A = te.placeholder((n, m), name="A")
+k = te.reduce_axis((0, m), name="k")
+B = te.compute((n,), lambda i: te.sum(A[i, k], axis=k), name="B")
+```
+
+###  2.1 Schedule 归约
+
+```python
+s = te.create_schedule(B.op)
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
