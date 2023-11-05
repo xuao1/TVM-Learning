@@ -186,9 +186,13 @@ B = te.compute((n,), lambda i: te.sum(A[i, k], axis=k), name="B")
 s = te.create_schedule(B.op)
 ```
 
+![image-20231105133652642](..\img\image-20231105133652642.png)
 
+reduction 轴类似于普通轴，可以拆分。
 
-
+```python
+ko, ki = s[B].split(B.op.reduce_axis[0], factor=16)
+```
 
 
 
