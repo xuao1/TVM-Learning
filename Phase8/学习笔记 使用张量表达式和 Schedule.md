@@ -72,6 +72,8 @@ s[B].fuse(xi, yi)
 s[B].reorder(xi, yo, xo, yi)
 ```
 
+会导致连续性的访问
+
 ### 1.5 bind
 
 `bind` 可将指定的 axis 与线程 axis 绑定，常用于 GPU 编程。
@@ -88,6 +90,35 @@ s[B].bind(tx, te.thread_axis("threadIdx.x"))
 首先进行 `split`，将计算分成若干个组，每组计算 64 个元素。
 
 将组绑定到 block 上，将组内的元素绑定到 thread 上。
+
+> 可以注意到，这时生成的可执行代码没有了原本的两层循环：
+>
+> 在第二个代码片段中，通过  `bind`  操作将这些循环维度绑定到了 GPU 的线程块（`blockIdx.x`）和线程（`threadIdx.x`）上。在这种情况下，循环不再是显式的嵌套 `for` 循环，而是将执行分布在 GPU 的线程块和线程上，这种执行方式是并行的。
+>
+> 当执行这段代码时，GPU 会为每个线程块和每个线程块中的每个线程分配实际的执行实例
+
+### 1.6 compute_at
+
+对于包含多个算子的 schedule，TVM 默认会分别计算。
+
+```python
+A = te.placeholder((m,), name="A")
+B = te.compute((m,), lambda i: A[i] + 1, name="B")
+C = te.compute((m,), lambda i: B[i] * 2, name="C")
+s = te.create_schedule(C.op)
+```
+
+执行顺序是，先计算完全部的 B，再计算 C，即会有两个 for 循环：
+
+
+
+而加入以下 `compute_at` 语句：
+
+```python
+s[B].compute_at(s[C], C.op.axis[0])
+```
+
+这句话的字面意思是将 B 的计算移动到 C 计算的首个 axis 中，实际效果就是 
 
 
 
