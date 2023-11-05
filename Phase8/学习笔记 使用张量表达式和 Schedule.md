@@ -110,7 +110,7 @@ s = te.create_schedule(C.op)
 
 执行顺序是，先计算完全部的 B，再计算 C，即会有两个 for 循环：
 
-
+![image-20231105104805286](..\img\image-20231105104805286.png)
 
 而加入以下 `compute_at` 语句：
 
@@ -118,7 +118,15 @@ s = te.create_schedule(C.op)
 s[B].compute_at(s[C], C.op.axis[0])
 ```
 
-这句话的字面意思是将 B 的计算移动到 C 计算的首个 axis 中，实际效果就是 
+这句话的字面意思是将 B 的计算移动到 C 计算的首个 axis 中，实际效果就是将 B 的计算合并到 C 的计算中，即对于每个 i，先计算 `B[i]`，接着计算 `C[i]`：
+
+![image-20231105104927117](..\img\image-20231105104927117.png)
+
+### 1.7 compute_inline
+
+`compute_inline` 可将 stage 标记为 inline，然后扩展计算体，并将其插入到需要张量的地址。
+
+
 
 
 
