@@ -90,13 +90,3 @@ s[B].compute_at(s[C], C.op.axis[0])
 # print(tvm.lower(s, [A, B, C], simple_mode=True))
 s[B].compute_root()
 # print(tvm.lower(s, [A, B, C], simple_mode=True))
-
-##########################################################################
-# reduce
-n = te.var("n")
-m = te.var("m")
-A = te.placeholder((n, m), name="A")
-k = te.reduce_axis((0, m), name="k")
-B = te.compute((n,), lambda i: te.sum(A[i, k], axis=k), name="B")
-s = te.create_schedule(B.op)
-print(tvm.lower(s, [A, B], simple_mode=True))
