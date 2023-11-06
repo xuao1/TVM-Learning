@@ -398,13 +398,43 @@ fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
 fopencl = tvm.build(s, [A, B], "opencl", name="myexp")
 ```
 
+### 3.3 内联函数降级规则
 
+当调用 `tvm.te.exp()` 时，TVM 会创建一个 intrinsic Call Expr。
 
+**TVM 使用转换规则（transformation rules），将内联调用（intrinsic call）转换为特定设备的外部调用（extern calls）.**
 
+TVM 支持在运行时自定义规则，以下为 exp 自定义 CUDA 降级规则：
 
+```python
+def my_cuda_math_rule(op):
+    assert isinstance(op, tvm.tir.Call)
+    name = op.op.name
+    assert name.startswith("tir.")
+    dispatch_name = name[4:]
+    if op.dtype == "float32":
+        return tvm.tir.call_pure_extern("float32", "%sf" % dispatch_name, op.args[0])
+    elif op.dtype == "float64":
+        return tvm.tir.call_pure_extren("float32", dispatch_name, op.args[0])
+    else:
+        return op
 
+register_intrin_lowering("tir.exp", target="cuda", f=my_cuda_math_rule, level=99)
+```
 
+首先，这段代码定义了一个 TVM Python 函数 `my_cuda_math_rule`，这是一个自定义的映射（lowering）规则，用于将高层次的数学运算符 **lower** 到 CUDA 支持的具体实现。
 
+然后，通过 `register_intrin_lowering` 将此规则注册到 TVM 的内部机制中，使得当遇到特定的数学运算符时（如 `tir.exp`），TVM 会调用这个自定义规则进行下放。
+
+> 详细解释每一行代码：
+>
+> + 确保传入的 op 是 tvm.tir.Call 的一个实例
+> + 获取操作的名称
+> + 确保操作名称以 "tir." 开头
+> + 移除前缀 "tir."，以获取具体的数学函数名
+> + 如果数据类型是 float32，生成一个外部调用，调用名称为 `%sf` 的外部函数，这里的 `%s` 会被 `dispatch_name`（例如 `"exp"`）替换
+> + 其他类似
+> + 最后注册 `my_cuda_math_rule` 函数作为 `"tir.exp"` 操作在 CUDA 目标上的内建规则
 
 
 
