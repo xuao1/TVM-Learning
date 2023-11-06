@@ -8,7 +8,7 @@
 from tvm import te
 ```
 
-Scheduel 是一组计算转换，可用于转换程序中的循环计算。
+Scheduel 是一组计算转换，用于指定执行特定操作的策略和顺序。
 
 声明变量：`n = te.vat("n")`
 
@@ -243,5 +243,73 @@ BF = s.rfactor(B, ki)
 
 最外层循环是每行，最终的规约结果存储在 `B_2` 数组中
 
-内层循环则是对于每行（比如说，第 ax0 行），对 `B_rf_i[][ax0]` 归约，结果存到 `B_2[ax0]` 可以看到，对于数组 `B_rf_1`，仍然是跨步取数
+内层循环则是对于每行（比如说，第 ax0 行），**对 `B_rf_i[][ax0]` 归约，结果存到 `B_2[ax0]`** ，可以看到，对于数组 `B_rf_1`，仍然是跨步取数。
+
+`rfactor` 用于对归约计算进行变换，目的是优化归约操作的并行执行。
+
+当一个归约操作在GPU等并行硬件上执行时，如果直接进行归约，那么所有的并行线程必须等待所有的输入都计算完成才能开始归约过程，这会导致不必要的同步和潜在的资源闲置。通过 `rfactor`，TVM 能够将归约拆分为两个阶段：
+
+1. **局部归约**（Local Reduction）：每个线程或线程块计算归约操作的一个部分，这可以并行进行而不需要任何同步。
+2. **全局归约**（Global Reduction）：然后将所有局部归约的结果合并起来以得到最终的归约结果。
+
+在这个特定的例子中，`rfactor` 被用来将原始的 `B` 张量计算拆分成两个部分，通过创建一个新的中间表示 `BF`。这个中间表示 `BF` 是对原始张量 `A` 进行部分归约的结果。每个 `BF` 元素都是输入 `A` 对应行的**部分和**（由 `ki` 定义的部分）。
+
+### 2.3 跨线程归约
+
+接下来可以在因子轴上进行并行化，这里 B 的 reduction 轴被标记为线程，如果唯一的 reduction 轴在设备中可以进行跨线程归约，则 TVM 允许将 reduction 轴标记为 thread。
+
+```
+ko, ki = s[B].split(B.op.reduce_axis[0], factor=16)
+BF = s.rfactor(B, ki)
+xo, xi = s[B].split(s[B].op.axis[0], factor=32)
+s[B].bind(xo, te.thread_axis("blockIdx.x"))
+s[B].bind(xi, te.thread_axis("threadIdx.y"))
+tx = te.thread_axis("threadIdx.x")
+s[B].bind(s[B].op.reduce_axis[0], tx)
+s[BF].compute_at(s[B], s[B].op.reduce_axis[0])
+s[B].set_store_predicate(tx.var.equal(0))
+fcuda = tvm.build(s, [A, B], "cuda")
+```
+
+可以看到，第三行将 B 的第一个维度拆分成两部分，分别绑定到 `blockIdx.x` 和 `threadIdx.y`. 在每个线程块内部，将有一个 `threadIdx.y` 的维度用于执行这 32 个迭代。
+
+之后定义了一个线程轴 `tx`，表示 CUDA 中的线程索引 `threadIdx.x`，将 B 的归约轴绑定到线程轴 `tx`.
+
+之后指定 BF 在 B 的归约轴上计算。
+
+倒数第二行代码设置了一个存储谓词，确保只有当 `tx` 为 0 时，才会执行对 B 的写操作。
+
+最后，调用 `tvm.build` 将 Scheduel 编译成 CUDA 代码。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
