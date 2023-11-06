@@ -219,11 +219,11 @@ ko, ki = s[B].split(B.op.reduce_axis[0], factor=16)
 BF = s.rfactor(B, ki)
 ```
 
-![image-20231105135950171](C:\Users\15370\AppData\Roaming\Typora\typora-user-images\image-20231105135950171.png)
+![image-20231105135950171](..\img\image-20231105135950171.png)
 
 首先看第一个循环：
 
-![image-20231105140730237](C:\Users\15370\AppData\Roaming\Typora\typora-user-images\image-20231105140730237.png)
+![image-20231105140730237](..\img\image-20231105140730237.png)
 
 最外层循环：k_inner 从 0 到 15，首先 k 即为归约轴，即列数，分成了若干组，每组 16 个元素
 
@@ -239,7 +239,7 @@ BF = s.rfactor(B, ki)
 
 再看第二个循环：
 
-![image-20231105140716422](C:\Users\15370\AppData\Roaming\Typora\typora-user-images\image-20231105140716422.png)
+![image-20231105140716422](..\img\image-20231105140716422.png)
 
 最外层循环是每行，最终的规约结果存储在 `B_2` 数组中
 
@@ -285,7 +285,7 @@ fcuda = tvm.build(s, [A, B], "cuda")
 
 + 如果不加 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
 
-  ![image-20231106104607691](C:\Users\15370\AppData\Roaming\Typora\typora-user-images\image-20231106104607691.png)
+  ![image-20231106112835761](..\img\image-20231106112835761.png)
 
   可以看到，计算 `B_rf` 的部分并没有体现出 thraedId，这个操作将在 CUDA 的全局内存上进行。
 
@@ -293,7 +293,19 @@ fcuda = tvm.build(s, [A, B], "cuda")
 
 + 加上 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
 
+  ![image-20231106110422465](..\img\image-20231106110422465.png)
 
+  可以看到，计算 `B_rf` 的任务也显式地划分到不同线程中。
+
+  后面的几行，先是设置一个掩码 `mask`，用于协调后续的 `__shfl_down_sync` 操作，它是用于归约的 CUDA 原语，它可以在一个线程束内的线程间高效地交换数据。这些 `__shfl_down_sync` 函数调用执行线程间的数据归约。`__shfl_sync` 调用用于在归约结束后，将归约结果分发给线程束中的每个线程。
+
+### 2.4 用二维归约描述卷积
+
+在 TVM 中，用简单的二维归约来描述卷积（过滤器大小 = [3, 3]，步长 = [1, 1]）
+
+```
+
+```
 
 
 
