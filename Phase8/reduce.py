@@ -21,9 +21,11 @@ BF = s.rfactor(B, ki)
 xo, xi = s[B].split(s[B].op.axis[0], factor=32)
 s[B].bind(xo, te.thread_axis("blockIdx.x"))
 s[B].bind(xi, te.thread_axis("threadIdx.y"))
-# tx = te.thread_axis("threadIdx.x")
-# s[B].bind(s[B].op.reduce_axis[0], tx)
+tx = te.thread_axis("threadIdx.x")
+s[B].bind(s[B].op.reduce_axis[0], tx)
 # s[BF].compute_at(s[B], s[B].op.reduce_axis[0])
 # s[B].set_store_predicate(tx.var.equal(0))
 fcuda = tvm.build(s, [A, B], "cuda")
 print(fcuda.imported_modules[0].get_source())
+
+
