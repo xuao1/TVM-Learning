@@ -281,7 +281,10 @@ fcuda = tvm.build(s, [A, B], "cuda")
 
 最后，调用 `tvm.build` 将 Scheduel 编译成 CUDA 代码。
 
+编译结果查看：`print(fcuda.imported_modules[0].get_source())`
 
++ 如果不加 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
++ 加上 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
 
 
 
