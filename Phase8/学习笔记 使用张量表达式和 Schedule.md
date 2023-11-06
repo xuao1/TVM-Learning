@@ -392,7 +392,11 @@ s[B].bind(tx, te.thread_axis("threadIdx.x"))
 fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
 ```
 
+该代码适用于 CUDA 和 opencl，相同的 te.exp 也可用于 float64 数据类型。
 
+```python
+fopencl = tvm.build(s, [A, B], "opencl", name="myexp")
+```
 
 
 
