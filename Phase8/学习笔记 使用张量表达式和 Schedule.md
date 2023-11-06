@@ -436,7 +436,20 @@ register_intrin_lowering("tir.exp", target="cuda", f=my_cuda_math_rule, level=99
 > + 其他类似
 > + 最后注册 `my_cuda_math_rule` 函数作为 `"tir.exp"` 操作在 CUDA 目标上的内建规则
 
+之后，再次运行：
 
+```python
+fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
+print(fcuda.imported_modules[0].get_source())
+```
+
+结果为：
+
+![image-20231106150650567](..\img\image-20231106150650567.png)
+
+可以看到，`__expf` 变成了现在的 `expf`.
+
+上述自定义规则的代码适用于 CUDA 和 opencl，相同的 te.exp 也可用于 float64 数据类型：
 
 
 
