@@ -400,6 +400,10 @@ fopencl = tvm.build(s, [A, B], "opencl", name="myexp")
 
 ### 3.3 内联函数降级规则
 
+在 TVM（Tensor Virtual Machine）中，“降级（lowering）”是指将高层次的抽象操作转换成可以在特定目标硬件上执行的低层次代码的过程。
+
+当提到“内联函数降级规则（intrinsic lowering rules）”，我们通常指的是将内置函数（也就是 intrinsic 函数，例如 `tvm.te.exp()`）的调用转化为具体实现。内联函数通常是一些预定义的，效率很高的操作，它们可能在不同的硬件上有不同的实现。TVM 需要将这些内联函数转换为对应硬件支持的外部调用，以确保最终生成的代码可以在目标硬件上运行。
+
 当调用 `tvm.te.exp()` 时，TVM 会创建一个 intrinsic Call Expr。
 
 **TVM 使用转换规则（transformation rules），将内联调用（intrinsic call）转换为特定设备的外部调用（extern calls）.**
@@ -415,7 +419,7 @@ def my_cuda_math_rule(op):
     if op.dtype == "float32":
         return tvm.tir.call_pure_extern("float32", "%sf" % dispatch_name, op.args[0])
     elif op.dtype == "float64":
-        return tvm.tir.call_pure_extren("float32", dispatch_name, op.args[0])
+        return tvm.tir.call_pure_extren("float64", dispatch_name, op.args[0])
     else:
         return op
 
@@ -449,15 +453,44 @@ print(fcuda.imported_modules[0].get_source())
 
 可以看到，`__expf` 变成了现在的 `expf`.
 
-上述自定义规则的代码适用于 CUDA 和 opencl，相同的 te.exp 也可用于 float64 数据类型：
+### 3.4 添加内联函数
 
+对于 TVM 未提供的内联函数，用户可以借助内联规则系统，添加新的内联函数。
 
+```python
+def mylog(x):
+    return tvm.tir.call_intrin(x.dtype, "tir.mylog", x)
 
+def my_cuda_mylog_rule(op):
+    if op.dtype == "float32":
+        return tvm.tir.call_pure_extern("float32", "logf", op.args[0])
+    elif op.dtype == "float64":
+        return tvm.tir.call_pure_extern("float64", "log", op.args[0])
+    else:
+        return op
 
+register_op_attr("tir.mylog", "TCallEffectKind", tvm.tir.CallEffectKind.Pure)
+register_intrin_lowering("tir.mylog", target="cuda", f=my_cuda_mylog_rule, level=99)
 
+n = te.var("n")
+A = te.placeholder((n,), name="A")
+B = te.compute(A.shape, lambda i: mylog(A[i]), name="B")
+s = te.create_schedule(B.op)
+num_thread = 64
+bx, tx = s[B].split(B.op.axis[0], factor=num_thread)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
+fcuda = tvm.build(s, [A, B], "cuda", name="mylog")
+print(fcuda.imported_modules[0].get_source())
+```
 
+其中有这样一句话：
 
+```python
+register_op_attr("tir.mylog", "TCallEffectKind", tvm.tir.CallEffectKind.Pure)
+```
 
+在 TVM 
 
 
 

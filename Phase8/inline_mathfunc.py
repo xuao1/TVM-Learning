@@ -45,12 +45,37 @@ def my_cuda_math_rule(op):
     if op.dtype == "float32":
         return tvm.tir.call_pure_extern("float32", "%sf" % dispatch_name, op.args[0])
     elif op.dtype == "float64":
-        return tvm.tir.call_pure_extren("float32", dispatch_name, op.args[0])
+        return tvm.tir.call_pure_extren("float64", dispatch_name, op.args[0])
     else:
         return op
 
 register_intrin_lowering("tir.exp", target="cuda", f=my_cuda_math_rule, level=99)
 fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
 # print(fcuda.imported_modules[0].get_source())
-fopencl = tvm.build(s, [A, B], "opencl", name="myexp")
-print(fopencl.imported_modules[0].get_source())
+
+######################################################################
+# 添加内联函数
+def mylog(x):
+    return tvm.tir.call_intrin(x.dtype, "tir.mylog", x)
+
+def my_cuda_mylog_rule(op):
+    if op.dtype == "float32":
+        return tvm.tir.call_pure_extern("float32", "logf", op.args[0])
+    elif op.dtype == "float64":
+        return tvm.tir.call_pure_extern("float64", "log", op.args[0])
+    else:
+        return op
+
+register_op_attr("tir.mylog", "TCallEffectKind", tvm.tir.CallEffectKind.Pure)
+register_intrin_lowering("tir.mylog", target="cuda", f=my_cuda_mylog_rule, level=99)
+
+n = te.var("n")
+A = te.placeholder((n,), name="A")
+B = te.compute(A.shape, lambda i: mylog(A[i]), name="B")
+s = te.create_schedule(B.op)
+num_thread = 64
+bx, tx = s[B].split(B.op.axis[0], factor=num_thread)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
+fcuda = tvm.build(s, [A, B], "cuda", name="mylog")
+print(fcuda.imported_modules[0].get_source())
