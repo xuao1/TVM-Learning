@@ -382,7 +382,15 @@ B = te.compute(A.shape, lambda i: te.exp(A[i]), name="B")
 s = te.create_schedule(B.op)
 ```
 
+再加上 `split` 和 `bind` 生成 CUDA 代码：
 
+```python
+num_thread = 64
+bx, tx = s[B].split(B.op.axis[0], factor=num_thread)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
+fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
+```
 
 
 
