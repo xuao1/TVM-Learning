@@ -336,6 +336,27 @@ B = te.compute((n,), lambda i: product(A[i, k], axis=k), name="B")
 
 
 
+## 3 内联及数学函数
+
+尽管 TVM 支持基本的算数运算，但很多时候，越需要复杂的内置函数，如 exp 取指函数。
+
+这些函数是依赖 target 系统的，并且在不同 target 平台中可能具有不同的名称。
+
+### 3.1 直接声明外部数学调用
+
+调用 target-specific 函数最直接的方法，就是通过 TVM 中的 extern 函数调用构造。
+
+比如使用 `tvm.tir.call_pure_extern` 来调用 `__expf` 函数（仅在 CUDA 下可用）。
+
+```python
+n = te.var("n")
+A = te.placeholder((n,), name="A")
+B = te.compute(A.shape, lambda i: tvm.tir.call_pure_extern("float32", "__expf", A[i]), name="B")
+s = te.create_schedule(B.op)
+```
+
+
+
 
 
 
