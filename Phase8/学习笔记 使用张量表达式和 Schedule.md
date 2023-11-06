@@ -303,11 +303,36 @@ fcuda = tvm.build(s, [A, B], "cuda")
 
 在 TVM 中，用简单的二维归约来描述卷积（过滤器大小 = [3, 3]，步长 = [1, 1]）
 
+```python
+n = te.var("n")
+Input = te.placeholder((n, n), name="Input")
+Filter = te.placeholder((3, 3), name="Filter")
+di = te.reduce_axis((0, 3), name="di")
+dj = te.reduce_axis((0, 3), name="dj")
+Output = te.compute(
+    (n - 2, n - 2),
+    lambda i, j: te.sum(Input[i + di, j + dj] * Filter[di, dj], axis=[di, dj]),
+    name="Output",
+)
+s = te.create_schedule(Output.op)
 ```
 
+### 2.5 定义一般交换规约运算
+
+除了 `te.sum`, `tvm.te.min` 和 `tvm.te.max` 等内置规约操作外，还可以通过 `te.comm_reducer` 定义交换规约操作。
+
+```python
+n = te.var("n")
+m = te.var("m")
+product = te.comm_reducer(lambda x, y: x * y, lambda t: tvm.tir.const(1, dtype=t), name="product")
+A = te.placeholder((n, m), name="A")
+k = te.reduce_axis((0, m), name="k")
+B = te.compute((n,), lambda i: product(A[i, k], axis=k), name="B")
 ```
 
+定义一个通用的归约（reducer）操作，命名为 `product`。这个归约操作接受两个参数 `x` 和 `y`，并将它们相乘。其身份元（identity element）是 1，这意味着归约的初始值是 1（乘法的恒等元素）。归约操作是可交换（commutative）。
 
+定义一个一维张量（或向量）`B`，它的计算是通过上面定义的 `product` 归约操作对 `A` 的第二个维度（`m`）进行归约得到的。`B[i]` 的每个元素都是 `A[i, :]` 这一行的所有元素的乘积。换句话说，这段代码计算了 `A` 每一行的乘积，并将结果存储在 `B` 中。
 
 
 
