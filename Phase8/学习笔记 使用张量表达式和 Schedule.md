@@ -355,6 +355,10 @@ B = te.compute(A.shape, lambda i: tvm.tir.call_pure_extern("float32", "__expf", 
 s = te.create_schedule(B.op)
 ```
 
+会生成一个 for 循环，调用 `T.call_pure_extern` 计算 A[i] 的指数
+
+再加上 `split` 和 `bind` 生成 CUDA 代码：
+
 
 
 
