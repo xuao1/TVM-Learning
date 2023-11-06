@@ -50,3 +50,5 @@ def my_cuda_math_rule(op):
         return op
 
 register_intrin_lowering("tir.exp", target="cuda", f=my_cuda_math_rule, level=99)
+fcuda = tvm.build(s, [A, B], "cuda", name="myexp")
+print(fcuda.imported_modules[0].get_source())
