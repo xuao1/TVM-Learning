@@ -284,6 +284,13 @@ fcuda = tvm.build(s, [A, B], "cuda")
 编译结果查看：`print(fcuda.imported_modules[0].get_source())`
 
 + 如果不加 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
+
+  ![image-20231106104607691](C:\Users\15370\AppData\Roaming\Typora\typora-user-images\image-20231106104607691.png)
+
+  可以看到，计算 `B_rf` 的部分并没有体现出 thraedId，这个操作将在 CUDA 的全局内存上进行。
+
+  当 `B_rf` 的计算不绑定到线程上时，它是按照 TVM 内部默认的串行或并行策略执行的。在生成的代码中，这部分循环可能默认为串行执行或者由 TVM 的 runtime 自动分配线程执行，具体取决于调度策略。
+
 + 加上 `s[BF].compute_at(s[B], s[B].op.reduce_axis[0])`：
 
 
