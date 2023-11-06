@@ -5,6 +5,7 @@ import tvm
 from tvm import te
 from tvm.ir import register_op_attr, register_intrin_lowering
 
+######################################################################
 # 直接声明外部数学调用
 n = te.var("n")
 A = te.placeholder((n,), name="A")
@@ -16,4 +17,12 @@ bx, tx = s[B].split(B.op.axis[0], factor=num_thread)
 s[B].bind(bx, te.thread_axis("blockIdx.x"))
 s[B].bind(tx, te.thread_axis("threadIdx.x"))
 f = tvm.build(s, [A, B], "cuda", name="myexp")
-print(f.imported_modules[0].get_source())
+# print(f.imported_modules[0].get_source())
+
+######################################################################
+# 统一内联调用
+n = te.var("n")
+A = te.placeholder((n,), name="A")
+B = te.compute(A.shape, lambda i: te.exp(A[i]), name="B")
+s = te.create_schedule(B.op)
+print(tvm.lower(s, [A, B], name="exp", simple_mode=True))

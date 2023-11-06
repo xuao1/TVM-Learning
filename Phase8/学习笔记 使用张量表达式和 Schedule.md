@@ -359,7 +359,28 @@ s = te.create_schedule(B.op)
 
 再加上 `split` 和 `bind` 生成 CUDA 代码：
 
+```python
+num_thread = 64
+bx, tx = s[B].split(B.op.axis[0], factor=num_thread)
+s[B].bind(bx, te.thread_axis("blockIdx.x"))
+s[B].bind(tx, te.thread_axis("threadIdx.x"))
+f = tvm.build(s, [A, B], "cuda", name="myexp")
+```
 
+### 3.2 统一内联调用
+
+3.1 中验证了直接外部调用可用于 device-specific 的函数。
+
+理想情况下，我们希望写一套代码，即可适用于任何设备以及任何数据类型。
+
+TVM 内联函数为用户提供了实现机制，且推荐用这个方法来解决问题。以下代码用的是 `te.exp`，它创建了一个内联调用 `tvm.te.exp()` 来做指数。
+
+```python
+n = te.var("n")
+A = te.placeholder((n,), name="A")
+B = te.compute(A.shape, lambda i: te.exp(A[i]), name="B")
+s = te.create_schedule(B.op)
+```
 
 
 
